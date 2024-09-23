@@ -284,11 +284,11 @@ function App() {
                     }
                   }}
                   style={props}
-                  className={`relative m-2 select-none opacity-50 hover:opacity-100 transition-all ${
+                  className={`relative m-2 select-none opacity-50 hover:opacity-100 ${
                     selected === items[i]
                       ? 'hover:border-white'
                       : !roundTransition && 'hover:border-white/20'
-                  } ${!roundTransition ? '' : ''} rounded-full border-2 p-2 ${
+                  } ${!roundTransition ? 'transition-all' : ''} rounded-full border-2 p-2 ${
                     difficulty === 'hard' && selected !== items[i]
                       ? 'blur-xl'
                       : ''
