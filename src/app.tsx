@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import CountUp from 'react-countup'
 
@@ -105,7 +105,7 @@ function getPuzzleRound(tries = 0): Round {
   return { entrance, choices, correctChoice, tries }
 }
 
-function shuffleArray(array) {
+function shuffleArray(array: Item[]) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
     ;[array[i], array[j]] = [array[j], array[i]]
@@ -114,7 +114,6 @@ function shuffleArray(array) {
 }
 
 function App() {
-  const lottieRef = useRef<HTMLCanvasElement>(null)
   const [difficulty, setDifficulty] = useAtom(difficultyAtomWithPersistence)
 
   const [round, setRound] = useState({
@@ -265,7 +264,7 @@ function App() {
           className="m-4 items-center justify-center"
           style={roundSpring}
         >
-          <div className="m-4 flex items-center justify-center transition-all">
+          <div className="m-4 flex items-center justify-center">
             {items.length > 0 &&
               mistsSprings.map((props, i) => (
                 <animated.button
