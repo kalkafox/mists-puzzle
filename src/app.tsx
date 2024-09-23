@@ -252,13 +252,23 @@ function App() {
             {items.length > 0 &&
               mistsSprings.map((props, i) => (
                 <animated.button
+                  onMouseEnter={(e) => {
+                    e.currentTarget.classList.remove('blur-xl')
+                  }}
+                  onMouseLeave={(e) => {
+                    if (selected !== items[i]) {
+                      e.currentTarget.classList.add('blur-xl')
+                    }
+                  }}
                   style={props}
                   className={`m-2 hover:opacity-100 relative opacity-50 ${
                     !roundTransition && 'hover:border-white'
                   } ${
                     !roundTransition ? 'transition-all' : ''
                   } rounded-full border-2 p-2 ${
-                    difficulty === 'hard' ? 'blur-xl' : ''
+                    difficulty === 'hard' && selected !== items[i]
+                      ? 'blur-xl'
+                      : ''
                   } ${
                     selected === items[i]
                       ? 'border-white'
