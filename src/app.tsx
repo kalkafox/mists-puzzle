@@ -284,7 +284,7 @@ function App() {
                     }
                   }}
                   style={props}
-                  className={`relative m-2 select-none opacity-50 hover:opacity-100 ${
+                  className={`relative m-2 select-none opacity-50 hover:opacity-100 transition-all ${
                     selected === items[i]
                       ? 'hover:border-white'
                       : !roundTransition && 'hover:border-white/20'
