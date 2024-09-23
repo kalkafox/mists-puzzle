@@ -1,17 +1,7 @@
-import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react'
-import { ThemeProvider } from './components/theme-provider'
+import { useEffect, useRef, useState } from 'react'
 
 import CountUp from 'react-countup'
 
-import mistsIcons from './lib/mists-icons'
-import { Item, Round } from './types/mists'
-import {
-  animated,
-  useSpring,
-  useSprings,
-  useTransition,
-} from '@react-spring/web'
-import { Button } from './components/ui/button'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,30 +20,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { animated, useSpring, useSprings } from '@react-spring/web'
+import { Button } from './components/ui/button'
+import mistsIcons from './lib/mists-icons'
+import { Item, Round } from './types/mists'
 
-import {
-  DotLottie,
-  DotLottieReact,
-  DotLottieReactProps,
-} from '@lottiefiles/dotlottie-react'
+import { Icon } from '@iconify-icon/react'
+import { DotLottieReact } from '@lottiefiles/dotlottie-react'
+import { useAtom } from 'jotai'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from './components/ui/popover'
-import { useAtom } from 'jotai'
+import { Separator } from './components/ui/separator'
+import { Switch } from './components/ui/switch'
 import {
-  difficultyAtom,
   difficultyAtomWithPersistence,
-  elapsedAtom,
   elapsedAtomWithPersistence,
   lossesAtomWithPersistence,
   reducedMotionAtomWithPersistence,
   winsAtomWithPersistence,
 } from './lib/atom'
-import { Icon } from '@iconify-icon/react'
-import { Separator } from './components/ui/separator'
-import { Switch } from './components/ui/switch'
 
 function getPuzzleRound(tries = 0): Round {
   // Shuffle the items to ensure randomness
@@ -228,22 +216,23 @@ function App() {
     <>
       <animated.div
         style={mistForegroundSpring}
-        className='fixed w-full h-full'>
-        <div id='foglayer_01' className='fog'>
-          <div className='image01'></div>
-          <div className='image02'></div>
+        className="fixed h-full w-full"
+      >
+        <div id="foglayer_01" className="fog">
+          <div className="image01"></div>
+          <div className="image02"></div>
         </div>
-        <div id='foglayer_02' className='fog'>
-          <div className='image01'></div>
-          <div className='image02'></div>
+        <div id="foglayer_02" className="fog">
+          <div className="image01"></div>
+          <div className="image02"></div>
         </div>
-        <div id='foglayer_03' className='fog'>
-          <div className='image01'></div>
-          <div className='image02'></div>
+        <div id="foglayer_03" className="fog">
+          <div className="image01"></div>
+          <div className="image02"></div>
         </div>
-        <div className='bg-slate-600/50 w-full h-full'></div>
+        <div className="h-full w-full bg-slate-600/50"></div>
       </animated.div>
-      <div className='fixed w-full h-full'>
+      <div className="fixed h-full w-full">
         {/* {round.choices.map((key) => (
           <button
             className={`hover:opacity-100 opacity-50 hover:border-2 hover:border-white rounded-full transition-all border-2 ${
@@ -260,21 +249,23 @@ function App() {
         ))} */}
         <animated.div
           style={checkmarkSpring}
-          className='relative flex justify-center'>
+          className="relative flex justify-center"
+        >
           {roundTransition ? (
             <DotLottieReact
-              className='w-20 h-20'
+              className="h-20 w-20"
               src={`${correct ? 'checkmark.lottie' : 'x.lottie'}`}
               autoplay
             />
           ) : (
-            <div className='w-20 h-20' />
+            <div className="h-20 w-20" />
           )}
         </animated.div>
         <animated.div
-          className='m-4 items-center justify-center'
-          style={roundSpring}>
-          <div className='flex m-4 items-center justify-center'>
+          className="m-4 items-center justify-center"
+          style={roundSpring}
+        >
+          <div className="m-4 flex items-center justify-center transition-all">
             {items.length > 0 &&
               mistsSprings.map((props, i) => (
                 <animated.button
@@ -288,16 +279,17 @@ function App() {
                   }}
                   onMouseLeave={(e) => {
                     if (roundTransition) return
+                    if (difficulty !== 'hard') return
                     if (selected !== items[i]) {
                       e.currentTarget.classList.add('blur-xl')
                     }
                   }}
                   style={props}
-                  className={`m-2 hover:opacity-100 relative opacity-50 ${
-                    !roundTransition && 'hover:border-white'
-                  } ${
-                    !roundTransition ? 'transition-all' : ''
-                  } rounded-full border-2 p-2 ${
+                  className={`relative m-2 select-none opacity-50 hover:opacity-100 ${
+                    selected === items[i]
+                      ? 'hover:border-white'
+                      : !roundTransition && 'hover:border-white/20'
+                  } ${!roundTransition ? '' : ''} rounded-full border-2 p-2 ${
                     difficulty === 'hard' && selected !== items[i]
                       ? 'blur-xl'
                       : ''
@@ -311,14 +303,15 @@ function App() {
                     console.log(round)
                     console.log(round.correctChoice)
                     setSelected(items[i])
-                  }}>
+                  }}
+                >
                   <img src={`${items[i].id}.png`} />
                 </animated.button>
               ))}
           </div>
-          <div className='flex m-4 items-center justify-center'>
+          <div className="m-4 flex items-center justify-center">
             {selected && (
-              <animated.div style={submitPuzzleSpring} className='relative'>
+              <animated.div style={submitPuzzleSpring} className="relative">
                 <Button
                   onClick={async () => {
                     console.log(selected)
@@ -326,10 +319,10 @@ function App() {
 
                     const isCorrect = selected === round.correctChoice
 
+                    setRoundTransition(true)
                     setCorrect(isCorrect)
 
-                    setRoundTransition(true)
-
+                    checkmarkSpringApi.set({ opacity: 0 })
                     checkmarkSpringApi.start({
                       opacity: 1,
                     })
@@ -378,9 +371,6 @@ function App() {
                     roundSpringApi.start({
                       opacity: 1,
                       scale: 1,
-                      onStart: () => {
-                        setRoundTransition(true)
-                      },
                     })
 
                     mistsSprings.map((a, b, c) => {
@@ -411,19 +401,21 @@ function App() {
                         setTime(Date.now())
                       },
                     }))
-                  }}>
+                  }}
+                >
                   Submit
                 </Button>
               </animated.div>
             )}
           </div>
         </animated.div>
-        <div className='fixed bottom-0 right-2 rounded-lg'>
+        <div className="fixed bottom-0 right-2 rounded-lg">
           <Popover
             onOpenChange={(a) => {
               console.log(a)
               setSettingsOpen(a)
-            }}>
+            }}
+          >
             <PopoverTrigger>
               <DotLottieReact
                 width={40}
@@ -434,30 +426,31 @@ function App() {
               />
             </PopoverTrigger>
             <PopoverContent>
-              <div className='flex items-center justify-between p-2 rounded-lg space-x-2'>
+              <div className="flex items-center justify-between space-x-2 rounded-lg p-2">
                 <b>Difficulty</b>
                 <Select
                   value={difficulty}
                   onValueChange={(e) => {
                     setDifficulty(e)
-                  }}>
-                  <SelectTrigger className='w-[180px]'>
-                    <SelectValue placeholder='Select a difficulty...' />
+                  }}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select a difficulty..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='normal'>Normal</SelectItem>
-                    <SelectItem value='hard'>Hard</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="hard">Hard</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className='flex justify-center my-2 rounded-lg p-2 space-x-2'>
+              <div className="my-2 flex justify-center space-x-2 rounded-lg p-2">
                 <Switch
                   checked={reduceMotion}
                   onCheckedChange={(e) => setReduceMotion(e)}
                 />
                 <div>Reduce motion</div>
               </div>
-              <div className='flex justify-center my-2 bg-stone-800 rounded-lg p-2 space-x-2'>
+              <div className="my-2 flex justify-center space-x-2 rounded-lg bg-stone-800 p-2">
                 <AlertDialog>
                   <AlertDialogTrigger>
                     <Button>Reset Scoreboard</Button>
@@ -479,7 +472,8 @@ function App() {
                           setLosses(0)
                           setWins(0)
                           setElapsed(0)
-                        }}>
+                        }}
+                      >
                         Continue
                       </AlertDialogAction>
                     </AlertDialogFooter>
@@ -489,8 +483,8 @@ function App() {
             </PopoverContent>
           </Popover>
         </div>
-        <div className='fixed bottom-0 m-2'>
-          <a href='https://github.com/kalkafox/mists-puzzle' target='_blank'>
+        <div className="fixed bottom-0 m-2">
+          <a href="https://github.com/kalkafox/mists-puzzle" target="_blank">
             <DotLottieReact
               width={24}
               height={24}
@@ -500,47 +494,47 @@ function App() {
             />
           </a>
         </div>
-        <div className='flex justify-center fixed bottom-0 w-full my-2 -z-10'>
-          <div className='p-2 bg-slate-800/20 backdrop-blur-lg rounded-lg w-48'>
+        <div className="fixed bottom-0 -z-10 my-2 flex w-full justify-center">
+          <div className="w-48 rounded-lg bg-slate-800/20 p-2 backdrop-blur-lg">
             <Icon
               width={24}
-              className='flex justify-center'
+              className="flex justify-center"
               inline={true}
-              icon='ic:baseline-sports-score'
+              icon="ic:baseline-sports-score"
             />
-            <Separator className='my-2' />
-            <div className='flex items-center space-x-2 bg-slate-800 p-2 rounded-lg'>
+            <Separator className="my-2" />
+            <div className="flex items-center space-x-2 rounded-lg bg-slate-800 p-2">
               <Icon
                 width={24}
-                className='inline text-green-400'
+                className="inline text-green-400"
                 inline={true}
-                icon='carbon:checkmark-filled'
+                icon="carbon:checkmark-filled"
               />
               <b>
                 <CountUp end={wins} preserveValue />
               </b>
             </div>
-            <div className='flex items-center space-x-2 my-1 bg-slate-800 p-2 rounded-lg'>
+            <div className="my-1 flex items-center space-x-2 rounded-lg bg-slate-800 p-2">
               <Icon
                 width={24}
-                className='inline text-red-400'
+                className="inline text-red-400"
                 inline={true}
-                icon='codicon:error'
+                icon="codicon:error"
               />
               <b>
                 <CountUp end={losses} preserveValue />
               </b>
             </div>
             {elapsed > 0 ? (
-              <div className='flex items-center space-x-2 my-1 bg-slate-800 p-2 rounded-lg'>
+              <div className="my-1 flex items-center space-x-2 rounded-lg bg-slate-800 p-2">
                 <Icon
                   width={24}
-                  className='inline'
+                  className="inline"
                   inline={true}
-                  icon='mingcute:time-fill'
+                  icon="mingcute:time-fill"
                 />
                 <b>
-                  <CountUp end={elapsed} preserveValue suffix='ms' />
+                  <CountUp end={elapsed} preserveValue suffix="ms" />
                 </b>
               </div>
             ) : null}

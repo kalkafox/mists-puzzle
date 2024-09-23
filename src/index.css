@@ -91,20 +91,26 @@
   width: 50%;
 }
 #foglayer_01 {
-  -webkit-animation: foglayer_01_opacity 10s linear infinite,
+  -webkit-animation:
+    foglayer_01_opacity 10s linear infinite,
     foglayer_moveme 15s linear infinite;
-  -moz-animation: foglayer_01_opacity 10s linear infinite,
+  -moz-animation:
+    foglayer_01_opacity 10s linear infinite,
     foglayer_moveme 15s linear infinite;
-  animation: foglayer_01_opacity 10s linear infinite,
+  animation:
+    foglayer_01_opacity 10s linear infinite,
     foglayer_moveme 15s linear infinite;
 }
 #foglayer_02,
 #foglayer_03 {
-  -webkit-animation: foglayer_02_opacity 21s linear infinite,
+  -webkit-animation:
+    foglayer_02_opacity 21s linear infinite,
     foglayer_moveme 13s linear infinite;
-  -moz-animation: foglayer_02_opacity 21s linear infinite,
+  -moz-animation:
+    foglayer_02_opacity 21s linear infinite,
     foglayer_moveme 13s linear infinite;
-  animation: foglayer_02_opacity 21s linear infinite,
+  animation:
+    foglayer_02_opacity 21s linear infinite,
     foglayer_moveme 13s linear infinite;
 }
 
