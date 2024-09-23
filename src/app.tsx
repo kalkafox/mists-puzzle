@@ -184,6 +184,8 @@ function App() {
       top: 0,
       delay: 500 + a * 100,
     }))
+
+    setRoundTransition(false)
   }, [])
 
   useEffect(() => {
