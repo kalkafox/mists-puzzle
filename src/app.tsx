@@ -183,9 +183,10 @@ function App() {
       opacity: 1,
       top: 0,
       delay: 500 + a * 100,
+      onRest: () => {
+        setRoundTransition(false)
+      },
     }))
-
-    setRoundTransition(false)
   }, [])
 
   useEffect(() => {
