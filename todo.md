@@ -1,0 +1,2 @@
+- Confetti on new record!
+- Finalize reduced motion

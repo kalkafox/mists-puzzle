@@ -1,6 +1,8 @@
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react'
 import { ThemeProvider } from './components/theme-provider'
 
+import CountUp from 'react-countup'
+
 import mistsIcons from './lib/mists-icons'
 import { Item, Round } from './types/mists'
 import {
@@ -40,7 +42,18 @@ import {
   PopoverTrigger,
 } from './components/ui/popover'
 import { useAtom } from 'jotai'
-import { difficultyAtom, difficultyAtomWithPersistence } from './lib/atom'
+import {
+  difficultyAtom,
+  difficultyAtomWithPersistence,
+  elapsedAtom,
+  elapsedAtomWithPersistence,
+  lossesAtomWithPersistence,
+  reducedMotionAtomWithPersistence,
+  winsAtomWithPersistence,
+} from './lib/atom'
+import { Icon } from '@iconify-icon/react'
+import { Separator } from './components/ui/separator'
+import { Switch } from './components/ui/switch'
 
 function getPuzzleRound(tries = 0): Round {
   // Shuffle the items to ensure randomness
@@ -86,7 +99,7 @@ function getPuzzleRound(tries = 0): Round {
 
   // Ensure we have a unique attribute
   if (uniqueAttributes.length === 0) {
-    return getPuzzleRound(tries++) // Retry if no unique attribute is found
+    return getPuzzleRound(++tries) // Retry if no unique attribute is found
   }
 
   const uniqueAttribute = uniqueAttributes[0] // Take the first unique attribute
@@ -98,7 +111,7 @@ function getPuzzleRound(tries = 0): Round {
 
   // Ensure we always return a valid choice
   if (!correctChoice) {
-    return getPuzzleRound(tries++) // Retry if no correct choice is found
+    return getPuzzleRound(++tries) // Retry if no correct choice is found
   }
 
   return { entrance, choices, correctChoice, tries }
@@ -132,10 +145,22 @@ function App() {
 
   const [settingsOpen, setSettingsOpen] = useState(false)
 
+  const [time, setTime] = useState(0)
+
+  const [elapsed, setElapsed] = useAtom(elapsedAtomWithPersistence)
+
+  const [reduceMotion, setReduceMotion] = useAtom(
+    reducedMotionAtomWithPersistence,
+  )
+
+  const [wins, setWins] = useAtom(winsAtomWithPersistence)
+
+  const [losses, setLosses] = useAtom(lossesAtomWithPersistence)
+
   const [mistsSprings, api] = useSprings(
     4,
     () => ({
-      from: { opacity: 0, top: -50 },
+      from: { opacity: 0, top: reduceMotion ? 0 : -50 },
     }),
     [],
   )
@@ -185,6 +210,7 @@ function App() {
       delay: 500 + a * 100,
       onRest: () => {
         setRoundTransition(false)
+        setTime(Date.now())
       },
     }))
   }, [])
@@ -252,10 +278,16 @@ function App() {
             {items.length > 0 &&
               mistsSprings.map((props, i) => (
                 <animated.button
+                  onMouseMove={(e) => {
+                    if (roundTransition) return
+                    e.currentTarget.classList.remove('blur-xl')
+                  }}
                   onMouseEnter={(e) => {
+                    if (roundTransition) return
                     e.currentTarget.classList.remove('blur-xl')
                   }}
                   onMouseLeave={(e) => {
+                    if (roundTransition) return
                     if (selected !== items[i]) {
                       e.currentTarget.classList.add('blur-xl')
                     }
@@ -288,7 +320,6 @@ function App() {
             {selected && (
               <animated.div style={submitPuzzleSpring} className='relative'>
                 <Button
-                  disabled={roundTransition}
                   onClick={async () => {
                     console.log(selected)
                     console.log(round.correctChoice)
@@ -308,22 +339,32 @@ function App() {
                         opacity: 1,
                         display: 'block',
                       })
+                      setLosses(losses + 1)
+                    } else {
+                      const newElapsed = Date.now() - time
+                      if (newElapsed < elapsed || elapsed === 0) {
+                        setElapsed(newElapsed)
+                      }
+
+                      setWins(wins + 1)
                     }
 
-                    setSubmitPuzzleSpring.start({
-                      opacity: 0,
-                      top: 10,
-                    })
+                    if (!reduceMotion) {
+                      setSubmitPuzzleSpring.start({
+                        opacity: 0,
+                        top: 10,
+                      })
 
-                    await Promise.all([
-                      roundSpring.opacity.start(0),
-                      roundSpring.scale.start(isCorrect ? 1.1 : 0.9),
-                    ])
+                      await Promise.all([
+                        roundSpring.opacity.start(0),
+                        roundSpring.scale.start(isCorrect ? 1.1 : 0.9),
+                      ])
 
-                    roundSpringApi.set({
-                      opacity: 0,
-                      scale: 1,
-                    })
+                      roundSpringApi.set({
+                        opacity: 0,
+                        scale: 1,
+                      })
+                    }
 
                     setSelected(null)
 
@@ -334,11 +375,17 @@ function App() {
                     )
 
                     roundSpringApi.set({ scale: 0.9, opacity: 0 })
-                    roundSpringApi.start({ opacity: 1, scale: 1 })
+                    roundSpringApi.start({
+                      opacity: 1,
+                      scale: 1,
+                      onStart: () => {
+                        setRoundTransition(true)
+                      },
+                    })
 
                     mistsSprings.map((a, b, c) => {
                       a.opacity.set(0)
-                      a.top.set(-50)
+                      a.top.set(reduceMotion ? 0 : -50)
                     })
 
                     setMistForegroundSpring.start({
@@ -354,14 +401,16 @@ function App() {
                       top: 0,
                       opacity: 1,
                       delay: i * 100,
-                    }))
-
-                    checkmarkSpringApi.start({
-                      opacity: 0,
                       onRest: () => {
-                        setRoundTransition(false)
+                        checkmarkSpringApi.start({
+                          opacity: 0,
+                          onRest: () => {
+                            setRoundTransition(false)
+                          },
+                        })
+                        setTime(Date.now())
                       },
-                    })
+                    }))
                   }}>
                   Submit
                 </Button>
@@ -385,7 +434,7 @@ function App() {
               />
             </PopoverTrigger>
             <PopoverContent>
-              <div className='flex items-center justify-between'>
+              <div className='flex items-center justify-between p-2 rounded-lg space-x-2'>
                 <b>Difficulty</b>
                 <Select
                   value={difficulty}
@@ -401,7 +450,14 @@ function App() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className='flex justify-center my-2'>
+              <div className='flex justify-center my-2 rounded-lg p-2 space-x-2'>
+                <Switch
+                  checked={reduceMotion}
+                  onCheckedChange={(e) => setReduceMotion(e)}
+                />
+                <div>Reduce motion</div>
+              </div>
+              <div className='flex justify-center my-2 bg-stone-800 rounded-lg p-2 space-x-2'>
                 <AlertDialog>
                   <AlertDialogTrigger>
                     <Button>Reset Scoreboard</Button>
@@ -418,7 +474,14 @@ function App() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction>Continue</AlertDialogAction>
+                      <AlertDialogAction
+                        onClick={() => {
+                          setLosses(0)
+                          setWins(0)
+                          setElapsed(0)
+                        }}>
+                        Continue
+                      </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
@@ -436,6 +499,52 @@ function App() {
               loop
             />
           </a>
+        </div>
+        <div className='flex justify-center fixed bottom-0 w-full my-2 -z-10'>
+          <div className='p-2 bg-slate-800/20 backdrop-blur-lg rounded-lg w-48'>
+            <Icon
+              width={24}
+              className='flex justify-center'
+              inline={true}
+              icon='ic:baseline-sports-score'
+            />
+            <Separator className='my-2' />
+            <div className='flex items-center space-x-2 bg-slate-800 p-2 rounded-lg'>
+              <Icon
+                width={24}
+                className='inline text-green-400'
+                inline={true}
+                icon='carbon:checkmark-filled'
+              />
+              <b>
+                <CountUp end={wins} preserveValue />
+              </b>
+            </div>
+            <div className='flex items-center space-x-2 my-1 bg-slate-800 p-2 rounded-lg'>
+              <Icon
+                width={24}
+                className='inline text-red-400'
+                inline={true}
+                icon='codicon:error'
+              />
+              <b>
+                <CountUp end={losses} preserveValue />
+              </b>
+            </div>
+            {elapsed > 0 ? (
+              <div className='flex items-center space-x-2 my-1 bg-slate-800 p-2 rounded-lg'>
+                <Icon
+                  width={24}
+                  className='inline'
+                  inline={true}
+                  icon='mingcute:time-fill'
+                />
+                <b>
+                  <CountUp end={elapsed} preserveValue suffix='ms' />
+                </b>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </>
