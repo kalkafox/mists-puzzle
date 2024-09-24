@@ -29,6 +29,7 @@ import { Icon } from '@iconify-icon/react'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import { useAtom } from 'jotai'
 import Confetti from './components/confetti'
+import Image from './components/image'
 import {
   Popover,
   PopoverContent,
@@ -159,7 +160,7 @@ function App() {
 
   const [mistForegroundSpring, setMistForegroundSpring] = useSpring(() => ({
     from: {
-      opacity: 0.1,
+      opacity: 0.2,
     },
   }))
 
@@ -300,7 +301,9 @@ function App() {
                       setSelected(items[i])
                     }}
                   >
-                    <img src={`${items[i].id}.png`} />
+                    {/* <img src={`${items[i].id}.png`} /> */}
+
+                    <Image src={`${items[i].id}.png`} />
                   </button>
                 </animated.div>
               ))}
@@ -415,7 +418,7 @@ function App() {
                     })
 
                     setMistForegroundSpring.start({
-                      opacity: 0.1,
+                      opacity: 0.2,
                     })
 
                     api.start((i) => ({
