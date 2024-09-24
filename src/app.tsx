@@ -431,7 +431,7 @@ function App() {
                           onRest: () => {
                             setRoundTransition(false)
                             setTime(Date.now())
-                            setTimeout(() => setNewRecord(false), 5000)
+                            setTimeout(() => setNewRecord(false), 10000)
                           },
                         })
                       },
