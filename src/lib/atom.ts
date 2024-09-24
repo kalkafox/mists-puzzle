@@ -18,6 +18,8 @@ interface AppSettings {
   difficulty: Difficulty
   reducedMotion: boolean
   warnBeforeReset: boolean
+  showCorrect: boolean
+  showCorrectDuration: number
 }
 
 const createStats = () => ({ wins: 0, losses: 0, elapsed: 0 })
@@ -43,6 +45,8 @@ export const appSettingsAtom = atom(
     difficulty: 'normal',
     reducedMotion: false,
     warnBeforeReset: false,
+    showCorrect: true,
+    showCorrectDuration: 1000,
   },
 )
 

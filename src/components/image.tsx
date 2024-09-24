@@ -29,8 +29,6 @@ const Image = ({ src, className }: { src: string; className?: string }) => {
             progress.percent === 1 ||
             progress.transferredBytes === progress.totalBytes
           ) {
-            console.log('yo2')
-
             const downloadEnd = Date.now()
 
             if (downloadEnd - downloadStart > 500) {

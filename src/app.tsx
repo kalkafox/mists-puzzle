@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import CountUp from 'react-countup'
 
@@ -128,6 +128,8 @@ function App() {
 
   const [correct, setCorrect] = useState(false)
 
+  const [showCorrect, setShowCorrect] = useState(false)
+
   const [items, setItems] = useState<Item[]>([])
 
   const [roundTransition, setRoundTransition] = useState(false)
@@ -173,6 +175,22 @@ function App() {
     scale: 1,
   }))
 
+  const checkAppSettings = useCallback(() => {
+    if (!appSettings.showCorrect) {
+      setAppSettings({
+        ...appSettings,
+        showCorrect: true,
+      })
+    }
+
+    if (!appSettings.showCorrectDuration) {
+      setAppSettings({
+        ...appSettings,
+        showCorrectDuration: 1000,
+      })
+    }
+  }, [appSettings, setAppSettings])
+
   useEffect(() => {
     setRoundTransition(true)
     const round = getPuzzleRound()
@@ -191,6 +209,10 @@ function App() {
         setTime(Date.now())
       },
     }))
+  }, [])
+
+  useEffect(() => {
+    checkAppSettings()
   }, [])
 
   useEffect(() => {
@@ -284,19 +306,13 @@ function App() {
                         }
                       })
                     }}
-                    className={`transition-all border-2 p-2 rounded-full ${
-                      selected === items[i]
-                        ? 'hover:border-white'
-                        : 'hover:border-white/20'
+                    className={`transition-all border-2 p-2 rounded-full ${appSettings.showCorrect && showCorrect && round.correctChoice === items[i] ? 'border-green-400' : 'border-transparent'} ${
+                      selected === items[i] ? 'hover:border-white' : ''
                     } ${
                       appSettings.difficulty === 'hard' && selected !== items[i]
                         ? 'blur-xl'
                         : ''
-                    } ${
-                      selected === items[i]
-                        ? 'border-white'
-                        : 'border-transparent'
-                    }`}
+                    } ${selected === items[i] ? 'border-white' : ''}`}
                     onClick={() => {
                       setSelected(items[i])
                     }}
@@ -313,7 +329,7 @@ function App() {
               <animated.div style={submitPuzzleSpring} className="relative">
                 <Button
                   onClick={async () => {
-                    console.log('yo')
+                    if (roundTransition) return
 
                     const isCorrect = selected === round.correctChoice
 
@@ -326,6 +342,13 @@ function App() {
                     })
 
                     if (!isCorrect) {
+                      if (appSettings.showCorrect) {
+                        setShowCorrect(true)
+                        await new Promise((resolve) =>
+                          setTimeout(resolve, appSettings.showCorrectDuration),
+                        )
+                      }
+
                       setMistForegroundSpring.start({
                         opacity: 1,
                       })
@@ -399,6 +422,7 @@ function App() {
                     }
 
                     setSelected(null)
+                    setShowCorrect(false)
 
                     const newRound = getPuzzleRound()
                     setRound(newRound)
@@ -482,24 +506,57 @@ function App() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="my-1 flex justify-center space-x-2 rounded-lg p-2">
+              <div className="my-1 flex justify-between space-x-2 rounded-lg p-2">
+                <div>Reduce motion</div>
                 <Switch
                   checked={appSettings.reducedMotion}
                   onCheckedChange={(e) =>
                     setAppSettings({ ...appSettings, reducedMotion: e })
                   }
                 />
-                <div>Reduce motion</div>
               </div>
-              <div className="my-2 flex justify-center space-x-2 rounded-lg p-2">
+              <div className="my-2 flex justify-between space-x-2 rounded-lg p-2">
+                <div>Warn before reset</div>
                 <Switch
                   checked={appSettings.warnBeforeReset}
                   onCheckedChange={(e) =>
                     setAppSettings({ ...appSettings, warnBeforeReset: e })
                   }
                 />
-                <div>Warn before reset</div>
               </div>
+              <div className="my-2 flex justify-between space-x-2 rounded-lg p-2">
+                <div>Show correct answer</div>
+                <Switch
+                  checked={appSettings.showCorrect}
+                  onCheckedChange={(e) =>
+                    setAppSettings({ ...appSettings, showCorrect: e })
+                  }
+                />
+              </div>
+              {appSettings.showCorrect ? (
+                <div className="my-2 flex justify-between items-center space-x-2 rounded-lg p-2">
+                  <b>Correct answer duration</b>
+                  <Select
+                    value={appSettings.showCorrectDuration.toString()}
+                    onValueChange={(e: string) => {
+                      //setDifficulty(e)
+                      setAppSettings({
+                        ...appSettings,
+                        showCorrectDuration: parseInt(e),
+                      })
+                    }}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Select a difficulty..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1000">1 second</SelectItem>
+                      <SelectItem value="2000">2 seconds</SelectItem>
+                      <SelectItem value="3000">3 seconds</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
               <div className="my-2 flex justify-center space-x-2">
                 <AlertDialog>
                   {!appSettings.warnBeforeReset ? (
