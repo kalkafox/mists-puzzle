@@ -24,10 +24,6 @@ export default defineConfig({
           if (id.includes('react')) {
             return 'react'
           }
-
-          if (id.includes('node_modules')) {
-            return 'vendor'
-          }
         },
       },
     },
