@@ -22,7 +22,6 @@ import {
 } from '@/components/ui/select'
 import { animated, useSpring, useSprings } from '@react-spring/web'
 import { Button } from './components/ui/button'
-import mistsIcons from './lib/mists-icons'
 import { Difficulty, Item, Round } from './types/mists'
 
 import { Icon } from '@iconify-icon/react'
@@ -42,67 +41,93 @@ import {
   appSettingsAtomWithPersistence,
   statsAtomWithPersistence,
 } from './lib/atom'
+import mistsIcons from './lib/mists-icons'
 
-function getPuzzleRound(tries = 0): Round {
-  // Shuffle the items to ensure randomness
-  const shuffledItems = mistsIcons.sort(() => Math.random() - 0.5)
+function shuffle<T>(array: T[]): T[] {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[array[i], array[j]] = [array[j], array[i]]
+  }
+  return array
+}
 
-  // Pick the entrance item
-  const entrance = shuffledItems[0]
+function attributesToString(attributes: string[]): string {
+  return attributes.sort().join('-')
+}
 
-  // Filter items to create a pool for choices
-  const choicesPool = shuffledItems.slice(1) // Exclude the entrance item
+function getPuzzleRound(tries = 0) {
+  // Step 1: Shuffle stones to randomize the options
+  const shuffledStones = shuffle(mistsIcons)
 
-  // Create a map to count occurrences of each attribute
-  const attributeCount: Record<string, number> = {}
+  // Step 2: Randomly select one entrance stone
+  const entranceStone =
+    shuffledStones[Math.floor(Math.random() * shuffledStones.length)]
 
-  // Count attributes from the entrance item
-  entrance.attributes.forEach((attr) => {
-    attributeCount[attr] = (attributeCount[attr] || 0) + 1
-  })
+  // Step 3: Prepare to select exit stones while avoiding duplicate attributes
+  const exitStones: Item[] = []
+  const usedAttributes: Set<string> = new Set(entranceStone.attributes) // Start with entrance attributes
+  const uniqueCombinations: Set<string> = new Set() // Track unique attribute combinations
 
-  // Select 3 choices while avoiding duplicates and ensuring only one unique attribute
-  const choices: Item[] = []
+  // Step 4: Attempt to find 3 unique exit stones
+  for (const stone of shuffledStones) {
+    if (stone !== entranceStone) {
+      const stoneKey = attributesToString(stone.attributes)
 
-  while (choices.length < 3 && choicesPool.length > 0) {
-    const index = Math.floor(Math.random() * choicesPool.length)
-    const choice = choicesPool[index]
+      // Check if this stone's combination is unique and not already used
+      if (
+        !uniqueCombinations.has(stoneKey) &&
+        stone.attributes.some((attr) => !usedAttributes.has(attr))
+      ) {
+        exitStones.push(stone)
+        uniqueCombinations.add(stoneKey) // Mark this combination as used
+        stone.attributes.forEach((attr) => usedAttributes.add(attr)) // Add the new attributes to the set
 
-    // Ensure the choice is not a duplicate and doesn't match the entrance
-    if (!choices.includes(choice) && choice.id !== entrance.id) {
-      choices.push(choice)
-      // Count the attributes for this choice
-      choice.attributes.forEach((attr) => {
-        attributeCount[attr] = (attributeCount[attr] || 0) + 1
-      })
-      // Remove the choice from the pool
-      choicesPool.splice(index, 1)
+        // Stop when we have 3 exit stones
+        if (exitStones.length === 3) break
+      }
     }
   }
 
-  // Find the unique attribute
-  const uniqueAttributes = Object.keys(attributeCount).filter(
+  // Ensure we have exactly 3 exit stones
+  if (exitStones.length < 3) {
+    // Reset and try again if not enough unique stones were found
+    return getPuzzleRound(++tries) // Recursive call to retry
+  }
+
+  // Step 5: Collect all attributes from the exits
+  const exitAttributes = exitStones.flatMap((stone) => stone.attributes)
+
+  // Step 6: Count occurrences of each attribute
+  const attributeCount: Record<string, number> = {}
+  for (const attr of exitAttributes) {
+    attributeCount[attr] = (attributeCount[attr] || 0) + 1
+  }
+
+  // Step 7: Find the unique attribute
+  const uniqueAttribute = Object.keys(attributeCount).find(
     (attr) => attributeCount[attr] === 1,
   )
 
-  // Ensure we have a unique attribute
-  if (uniqueAttributes.length === 0) {
-    return getPuzzleRound(++tries) // Retry if no unique attribute is found
+  if (!uniqueAttribute) {
+    return getPuzzleRound(++tries)
   }
 
-  const uniqueAttribute = uniqueAttributes[0] // Take the first unique attribute
-
-  // Find the choice that contains the unique attribute
-  const correctChoice = choices.find((choice) =>
-    choice.attributes.includes(uniqueAttribute),
+  // Step 8: The correct path is the exit with the unique attribute
+  const correctPath = exitStones.find((stone) =>
+    stone.attributes.includes(uniqueAttribute),
   )
 
-  // Ensure we always return a valid choice
-  if (!correctChoice) {
-    return getPuzzleRound(++tries) // Retry if no correct choice is found
+  if (!correctPath) {
+    return getPuzzleRound(++tries)
   }
 
-  return { entrance, choices, correctChoice, tries }
+  // Return the puzzle round data
+  return {
+    entrance: entranceStone,
+    choices: exitStones,
+    correctChoice: correctPath,
+    tries,
+  }
 }
 
 function shuffleArray(array: Item[]) {
@@ -317,7 +342,9 @@ function App() {
                     className={`transition-all border-2 p-2 rounded-full ${appSettings.showCorrect && showCorrect && round.correctChoice === items[i] ? 'border-green-400' : 'border-transparent'} ${
                       selected === items[i] ? 'hover:border-white' : ''
                     } ${
-                      appSettings.difficulty === 'hard' && selected !== items[i]
+                      appSettings.difficulty === 'hard' &&
+                      selected !== items[i] &&
+                      !showCorrect
                         ? 'blur-xl'
                         : ''
                     } ${selected === items[i] ? 'border-white' : ''}`}
@@ -365,7 +392,8 @@ function App() {
                         ...stats,
                         [appSettings.difficulty]: {
                           ...stats[appSettings.difficulty],
-                          losses: stats[appSettings.difficulty].losses + 1,
+                          losses: stats[appSettings.difficulty].losses || 0 + 1,
+                          wins: stats[appSettings.difficulty].wins || 0,
                         },
                       })
                     } else {
@@ -384,8 +412,9 @@ function App() {
                         setStats({
                           ...stats,
                           [appSettings.difficulty]: {
-                            elapsed: newElapsed,
-                            wins: stats[appSettings.difficulty].wins + 1,
+                            ...stats[appSettings.difficulty],
+                            wins: stats[appSettings.difficulty].wins || 0 + 1,
+                            losses: stats[appSettings.difficulty].losses || 0,
                           },
                         })
 
@@ -404,7 +433,8 @@ function App() {
                           ...stats,
                           [appSettings.difficulty]: {
                             ...stats[appSettings.difficulty],
-                            wins: stats[appSettings.difficulty].wins + 1,
+                            wins: stats[appSettings.difficulty].wins || 0 + 1,
+                            losses: stats[appSettings.difficulty].losses || 0,
                           },
                         })
                       }
