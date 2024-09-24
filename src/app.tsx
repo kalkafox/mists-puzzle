@@ -246,6 +246,14 @@ function App() {
       </animated.div>
 
       {newRecord && <Confetti />}
+      <div className="flex text-sm justify-center">
+        <div className="w-96 bg-red-300/20 p-2 rounded-lg my-2">
+          The logic used in this minigame DOES NOT reflect the original logic
+          within the dungeon, which means that it may not be entirely accurate.
+          I have not entirely worked that out. Sorry for the troubles. Please do
+          not use this as a method of reference just yet.
+        </div>
+      </div>
       <div className="fixed h-full w-full">
         <animated.div
           style={checkmarkSpring}
