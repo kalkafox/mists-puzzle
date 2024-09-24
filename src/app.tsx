@@ -28,6 +28,7 @@ import { Item, Round } from './types/mists'
 import { Icon } from '@iconify-icon/react'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import { useAtom } from 'jotai'
+import Confetti from './components/confetti'
 import {
   Popover,
   PopoverContent,
@@ -132,6 +133,8 @@ function App() {
 
   const [settingsOpen, setSettingsOpen] = useState(false)
 
+  const [pauseAnimation, setPauseAnimation] = useState(false)
+
   const [time, setTime] = useState(0)
 
   const [elapsed, setElapsed] = useAtom(elapsedAtomWithPersistence)
@@ -231,6 +234,8 @@ function App() {
         </div>
         <div className="h-full w-full bg-slate-600/50"></div>
       </animated.div>
+
+      {correct && <Confetti />}
       <div className="fixed h-full w-full">
         {/* {round.choices.map((key) => (
           <button
@@ -267,45 +272,50 @@ function App() {
           <div className="m-4 flex items-center justify-center">
             {items.length > 0 &&
               mistsSprings.map((props, i) => (
-                <animated.button
-                  onMouseMove={(e) => {
-                    if (roundTransition) return
-                    e.currentTarget.classList.remove('blur-xl')
-                  }}
-                  onMouseEnter={(e) => {
-                    if (roundTransition) return
-                    e.currentTarget.classList.remove('blur-xl')
-                  }}
-                  onMouseLeave={(e) => {
-                    if (roundTransition) return
-                    if (difficulty !== 'hard') return
-                    if (selected !== items[i]) {
-                      e.currentTarget.classList.add('blur-xl')
-                    }
-                  }}
+                <animated.div
                   style={props}
-                  className={`relative m-2 select-none opacity-50 hover:opacity-100 ${
-                    selected === items[i]
-                      ? 'hover:border-white'
-                      : !roundTransition && 'hover:border-white/20'
-                  } ${!roundTransition ? 'transition-all' : ''} rounded-full border-2 p-2 ${
-                    difficulty === 'hard' && selected !== items[i]
-                      ? 'blur-xl'
-                      : ''
-                  } ${
-                    selected === items[i]
-                      ? 'border-white'
-                      : 'border-transparent'
-                  }`}
+                  className={`relative m-2 select-none`}
                   key={items[i].id}
-                  onClick={() => {
-                    console.log(round)
-                    console.log(round.correctChoice)
-                    setSelected(items[i])
-                  }}
                 >
-                  <img src={`${items[i].id}.png`} />
-                </animated.button>
+                  <button
+                    disabled={roundTransition}
+                    onMouseMove={(e) => {
+                      if (roundTransition) return
+                      e.currentTarget.classList.remove('blur-xl')
+                    }}
+                    onMouseEnter={(e) => {
+                      if (roundTransition) return
+                      e.currentTarget.classList.remove('blur-xl')
+                    }}
+                    onMouseLeave={(e) => {
+                      if (roundTransition) return
+                      if (difficulty !== 'hard') return
+                      if (selected !== items[i]) {
+                        e.currentTarget.classList.add('blur-xl')
+                      }
+                    }}
+                    className={`transition-all border-2 p-2 rounded-full ${
+                      selected === items[i]
+                        ? 'hover:border-white'
+                        : 'hover:border-white/20'
+                    } ${
+                      difficulty === 'hard' && selected !== items[i]
+                        ? 'blur-xl'
+                        : ''
+                    } ${
+                      selected === items[i]
+                        ? 'border-white'
+                        : 'border-transparent'
+                    }`}
+                    onClick={() => {
+                      console.log(round)
+                      console.log(round.correctChoice)
+                      setSelected(items[i])
+                    }}
+                  >
+                    <img src={`${items[i].id}.png`} />
+                  </button>
+                </animated.div>
               ))}
           </div>
           <div className="m-4 flex items-center justify-center">
@@ -397,12 +407,17 @@ function App() {
                             setRoundTransition(false)
                           },
                         })
-                        setTime(Date.now())
                       },
                     }))
+                    setTime(Date.now())
                   }}
                 >
-                  Submit
+                  <Icon
+                    width={24}
+                    className="inline"
+                    inline={true}
+                    icon="formkit:submit"
+                  />
                 </Button>
               </animated.div>
             )}
@@ -449,10 +464,10 @@ function App() {
                 />
                 <div>Reduce motion</div>
               </div>
-              <div className="my-2 flex justify-center space-x-2 rounded-lg bg-stone-800 p-2">
+              <div className="my-2 flex justify-center space-x-2">
                 <AlertDialog>
-                  <AlertDialogTrigger>
-                    <Button>Reset Scoreboard</Button>
+                  <AlertDialogTrigger className="rounded-lg bg-stone-800 p-2">
+                    Reset Scoreboard
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
