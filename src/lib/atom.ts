@@ -1,50 +1,68 @@
+import { Difficulty } from '@/types/mists'
 import { atom, createStore } from 'jotai'
 
 export const store = createStore()
 
-export const difficultyAtom = atom(
-  localStorage.getItem('difficulty') ?? 'normal',
+interface UserStats {
+  normal: Stats
+  hard: Stats
+}
+
+interface Stats {
+  wins: number
+  losses: number
+  elapsed: number
+}
+
+interface AppSettings {
+  difficulty: Difficulty
+  reducedMotion: boolean
+  warnBeforeReset: boolean
+}
+
+const createStats = () => ({ wins: 0, losses: 0, elapsed: 0 })
+
+export const statsAtom = atom(
+  JSON.parse(localStorage.getItem('stats')!) ??
+    ({
+      normal: createStats(),
+      hard: createStats(),
+    } as UserStats),
+)
+
+export const statsAtomWithPersistence = atom(
+  (get) => get(statsAtom) as UserStats,
+  (_, set, stats: UserStats) => {
+    set(statsAtom, stats)
+    localStorage.setItem('stats', JSON.stringify(stats))
+  },
+)
+
+export const appSettingsAtom = atom(
+  (JSON.parse(localStorage.getItem('appSettings')!) as AppSettings) ?? {
+    difficulty: 'normal',
+    reducedMotion: false,
+    warnBeforeReset: false,
+  },
+)
+
+export const appSettingsAtomWithPersistence = atom(
+  (get) => get(appSettingsAtom),
+  (_, set, appSettings: AppSettings) => {
+    set(appSettingsAtom, appSettings)
+    localStorage.setItem('appSettings', JSON.stringify(appSettings))
+  },
+)
+
+export const difficultyAtom = atom<Difficulty>(
+  (localStorage.getItem('difficulty') as Difficulty) ?? 'normal',
 )
 
 export const difficultyAtomWithPersistence = atom(
   (get) => get(difficultyAtom),
-  (get, set, newDifficulty: string) => {
+  (_, set, newDifficulty: Difficulty) => {
     set(difficultyAtom, newDifficulty)
     localStorage.setItem('difficulty', newDifficulty)
-  },
-)
-
-export const winsAtom = atom(parseInt(localStorage.getItem('wins') ?? '0') ?? 0)
-
-export const winsAtomWithPersistence = atom(
-  (get) => get(winsAtom),
-  (get, set, wins: number) => {
-    set(winsAtom, wins)
-    localStorage.setItem('wins', wins.toString())
-  },
-)
-
-export const lossesAtom = atom(
-  parseInt(localStorage.getItem('losses') ?? '0') ?? 0,
-)
-
-export const lossesAtomWithPersistence = atom(
-  (get) => get(lossesAtom),
-  (get, set, losses: number) => {
-    set(lossesAtom, losses)
-    localStorage.setItem('losses', losses.toString())
-  },
-)
-
-export const elapsedAtom = atom(
-  parseInt(localStorage.getItem('elapsed') ?? '0') ?? 0,
-)
-
-export const elapsedAtomWithPersistence = atom(
-  (get) => get(elapsedAtom),
-  (get, set, elapsed: number) => {
-    set(elapsedAtom, elapsed)
-    localStorage.setItem('elapsed', elapsed.toString())
   },
 )
 
@@ -54,7 +72,7 @@ export const reducedMotionAtom = atom(
 
 export const reducedMotionAtomWithPersistence = atom(
   (get) => get(reducedMotionAtom),
-  (get, set, reducedMotion: boolean) => {
+  (_, set, reducedMotion: boolean) => {
     set(reducedMotionAtom, reducedMotion)
     localStorage.setItem('reduceMotion', reducedMotion.toString())
   },

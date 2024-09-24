@@ -5,6 +5,33 @@ import { defineConfig } from 'vite'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('lottie')) {
+            return 'lottie'
+          }
+
+          if (id.includes('iconify')) {
+            return 'iconify'
+          }
+
+          if (id.includes('radix')) {
+            return 'radix'
+          }
+
+          if (id.includes('react')) {
+            return 'react'
+          }
+
+          if (id.includes('node_modules')) {
+            return 'vendor'
+          }
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

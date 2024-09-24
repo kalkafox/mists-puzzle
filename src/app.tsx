@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import CountUp from 'react-countup'
 
@@ -23,7 +23,7 @@ import {
 import { animated, useSpring, useSprings } from '@react-spring/web'
 import { Button } from './components/ui/button'
 import mistsIcons from './lib/mists-icons'
-import { Item, Round } from './types/mists'
+import { Difficulty, Item, Round } from './types/mists'
 
 import { Icon } from '@iconify-icon/react'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
@@ -36,12 +36,10 @@ import {
 } from './components/ui/popover'
 import { Separator } from './components/ui/separator'
 import { Switch } from './components/ui/switch'
+import { useToast } from './hooks/use-toast'
 import {
-  difficultyAtomWithPersistence,
-  elapsedAtomWithPersistence,
-  lossesAtomWithPersistence,
-  reducedMotionAtomWithPersistence,
-  winsAtomWithPersistence,
+  appSettingsAtomWithPersistence,
+  statsAtomWithPersistence,
 } from './lib/atom'
 
 function getPuzzleRound(tries = 0): Round {
@@ -115,7 +113,9 @@ function shuffleArray(array: Item[]) {
 }
 
 function App() {
-  const [difficulty, setDifficulty] = useAtom(difficultyAtomWithPersistence)
+  const buttonRefs = useRef<(HTMLButtonElement | null)[]>([])
+
+  const { toast } = useToast()
 
   const [round, setRound] = useState({
     entrance: { id: '', attributes: [''] },
@@ -131,26 +131,18 @@ function App() {
 
   const [roundTransition, setRoundTransition] = useState(false)
 
-  const [settingsOpen, setSettingsOpen] = useState(false)
-
-  const [pauseAnimation, setPauseAnimation] = useState(false)
-
   const [time, setTime] = useState(0)
 
-  const [elapsed, setElapsed] = useAtom(elapsedAtomWithPersistence)
+  const [newRecord, setNewRecord] = useState(false)
 
-  const [reduceMotion, setReduceMotion] = useAtom(
-    reducedMotionAtomWithPersistence,
-  )
+  const [appSettings, setAppSettings] = useAtom(appSettingsAtomWithPersistence)
 
-  const [wins, setWins] = useAtom(winsAtomWithPersistence)
-
-  const [losses, setLosses] = useAtom(lossesAtomWithPersistence)
+  const [stats, setStats] = useAtom(statsAtomWithPersistence)
 
   const [mistsSprings, api] = useSprings(
     4,
     () => ({
-      from: { opacity: 0, top: reduceMotion ? 0 : -50 },
+      from: { opacity: 0, top: appSettings.reducedMotion ? 0 : -50 },
     }),
     [],
   )
@@ -167,8 +159,7 @@ function App() {
 
   const [mistForegroundSpring, setMistForegroundSpring] = useSpring(() => ({
     from: {
-      opacity: 0,
-      display: 'none',
+      opacity: 0.1,
     },
   }))
 
@@ -188,13 +179,9 @@ function App() {
 
     setItems(() => shuffleArray([...round.choices, round.entrance]))
 
-    console.log(round)
-
-    console.log(round.correctChoice)
-
     console.log(`Took ${round.tries} tries.`)
 
-    api.start((a, i) => ({
+    api.start((a) => ({
       opacity: 1,
       top: 0,
       delay: 500 + a * 100,
@@ -235,22 +222,8 @@ function App() {
         <div className="h-full w-full bg-slate-600/50"></div>
       </animated.div>
 
-      {correct && <Confetti />}
+      {newRecord && <Confetti />}
       <div className="fixed h-full w-full">
-        {/* {round.choices.map((key) => (
-          <button
-            className={`hover:opacity-100 opacity-50 hover:border-2 hover:border-white rounded-full transition-all border-2 ${
-              selected === key ? 'border-white' : 'border-transparent'
-            }`}
-            key={key.id}
-            onClick={() => {
-              console.log(round)
-              console.log(correctChoice)
-              setSelected(key)
-            }}>
-            <img src={`${key.id}.png`} />
-          </button>
-        ))} */}
         <animated.div
           style={checkmarkSpring}
           className="relative flex justify-center"
@@ -274,10 +247,11 @@ function App() {
               mistsSprings.map((props, i) => (
                 <animated.div
                   style={props}
-                  className={`relative m-2 select-none`}
+                  className={`relative m-2 select-none transition-transform ${selected === items[i] && 'scale-110'} ${!roundTransition && 'hover:scale-110'}`}
                   key={items[i].id}
                 >
                   <button
+                    ref={(el) => (buttonRefs.current[i] = el)}
                     disabled={roundTransition}
                     onMouseMove={(e) => {
                       if (roundTransition) return
@@ -285,21 +259,36 @@ function App() {
                     }}
                     onMouseEnter={(e) => {
                       if (roundTransition) return
+
                       e.currentTarget.classList.remove('blur-xl')
+
+                      if (appSettings.difficulty !== 'hard') return
+
+                      buttonRefs.current
+                        .filter((el) => el !== e.currentTarget)
+                        .map((e) => {
+                          e?.classList.add('blur-xl')
+                        })
                     }}
                     onMouseLeave={(e) => {
                       if (roundTransition) return
-                      if (difficulty !== 'hard') return
+                      if (appSettings.difficulty !== 'hard') return
                       if (selected !== items[i]) {
                         e.currentTarget.classList.add('blur-xl')
                       }
+
+                      buttonRefs.current.map((e, index) => {
+                        if (selected === items[index]) {
+                          e?.classList.remove('blur-xl')
+                        }
+                      })
                     }}
                     className={`transition-all border-2 p-2 rounded-full ${
                       selected === items[i]
                         ? 'hover:border-white'
                         : 'hover:border-white/20'
                     } ${
-                      difficulty === 'hard' && selected !== items[i]
+                      appSettings.difficulty === 'hard' && selected !== items[i]
                         ? 'blur-xl'
                         : ''
                     } ${
@@ -308,8 +297,6 @@ function App() {
                         : 'border-transparent'
                     }`}
                     onClick={() => {
-                      console.log(round)
-                      console.log(round.correctChoice)
                       setSelected(items[i])
                     }}
                   >
@@ -323,8 +310,7 @@ function App() {
               <animated.div style={submitPuzzleSpring} className="relative">
                 <Button
                   onClick={async () => {
-                    console.log(selected)
-                    console.log(round.correctChoice)
+                    console.log('yo')
 
                     const isCorrect = selected === round.correctChoice
 
@@ -339,19 +325,60 @@ function App() {
                     if (!isCorrect) {
                       setMistForegroundSpring.start({
                         opacity: 1,
-                        display: 'block',
                       })
-                      setLosses(losses + 1)
+                      // setLosses(losses + 1)
+                      setStats({
+                        ...stats,
+                        [appSettings.difficulty]: {
+                          ...stats[appSettings.difficulty],
+                          losses: stats[appSettings.difficulty].losses + 1,
+                        },
+                      })
                     } else {
                       const newElapsed = Date.now() - time
-                      if (newElapsed < elapsed || elapsed === 0) {
-                        setElapsed(newElapsed)
+                      console.log(newElapsed)
+                      console.log(stats[appSettings.difficulty].elapsed)
+
+                      // extremely fucking dumb
+                      let setWin = false
+
+                      if (
+                        newElapsed < stats[appSettings.difficulty].elapsed ||
+                        stats[appSettings.difficulty].elapsed === 0
+                      ) {
+                        // setElapsed(newElapsed)
+                        setStats({
+                          ...stats,
+                          [appSettings.difficulty]: {
+                            elapsed: newElapsed,
+                            wins: stats[appSettings.difficulty].wins + 1,
+                          },
+                        })
+
+                        setWin = true
+
+                        setNewRecord(true)
+                        toast({
+                          description: 'A new record!',
+                        })
+
+                        //console.log(stats[appSettings.difficulty].elapsed)
                       }
 
-                      setWins(wins + 1)
+                      if (!setWin) {
+                        setStats({
+                          ...stats,
+                          [appSettings.difficulty]: {
+                            ...stats[appSettings.difficulty],
+                            wins: stats[appSettings.difficulty].wins + 1,
+                          },
+                        })
+                      }
+
+                      // setWins(wins + 1)
                     }
 
-                    if (!reduceMotion) {
+                    if (!appSettings.reducedMotion) {
                       setSubmitPuzzleSpring.start({
                         opacity: 0,
                         top: 10,
@@ -382,21 +409,16 @@ function App() {
                       scale: 1,
                     })
 
-                    mistsSprings.map((a, b, c) => {
+                    mistsSprings.map((a) => {
                       a.opacity.set(0)
-                      a.top.set(reduceMotion ? 0 : -50)
+                      a.top.set(appSettings.reducedMotion ? 0 : -50)
                     })
 
                     setMistForegroundSpring.start({
-                      opacity: 0,
-                      onRest: (a, b) => {
-                        b.start({
-                          display: 'none',
-                        })
-                      },
+                      opacity: 0.1,
                     })
 
-                    api.start((i, b) => ({
+                    api.start((i) => ({
                       top: 0,
                       opacity: 1,
                       delay: i * 100,
@@ -405,11 +427,12 @@ function App() {
                           opacity: 0,
                           onRest: () => {
                             setRoundTransition(false)
+                            setTime(Date.now())
+                            setTimeout(() => setNewRecord(false), 5000)
                           },
                         })
                       },
                     }))
-                    setTime(Date.now())
                   }}
                 >
                   <Icon
@@ -424,12 +447,7 @@ function App() {
           </div>
         </animated.div>
         <div className="fixed bottom-0 right-2 rounded-lg">
-          <Popover
-            onOpenChange={(a) => {
-              console.log(a)
-              setSettingsOpen(a)
-            }}
-          >
+          <Popover>
             <PopoverTrigger>
               <DotLottieReact
                 width={40}
@@ -443,9 +461,13 @@ function App() {
               <div className="flex items-center justify-between space-x-2 rounded-lg p-2">
                 <b>Difficulty</b>
                 <Select
-                  value={difficulty}
-                  onValueChange={(e) => {
-                    setDifficulty(e)
+                  value={appSettings.difficulty}
+                  onValueChange={(e: Difficulty) => {
+                    //setDifficulty(e)
+                    setAppSettings({
+                      ...appSettings,
+                      difficulty: e,
+                    })
                   }}
                 >
                   <SelectTrigger className="w-[180px]">
@@ -457,18 +479,47 @@ function App() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="my-2 flex justify-center space-x-2 rounded-lg p-2">
+              <div className="my-1 flex justify-center space-x-2 rounded-lg p-2">
                 <Switch
-                  checked={reduceMotion}
-                  onCheckedChange={(e) => setReduceMotion(e)}
+                  checked={appSettings.reducedMotion}
+                  onCheckedChange={(e) =>
+                    setAppSettings({ ...appSettings, reducedMotion: e })
+                  }
                 />
                 <div>Reduce motion</div>
               </div>
+              <div className="my-2 flex justify-center space-x-2 rounded-lg p-2">
+                <Switch
+                  checked={appSettings.warnBeforeReset}
+                  onCheckedChange={(e) =>
+                    setAppSettings({ ...appSettings, warnBeforeReset: e })
+                  }
+                />
+                <div>Warn before reset</div>
+              </div>
               <div className="my-2 flex justify-center space-x-2">
                 <AlertDialog>
-                  <AlertDialogTrigger className="rounded-lg bg-stone-800 p-2">
-                    Reset Scoreboard
-                  </AlertDialogTrigger>
+                  {!appSettings.warnBeforeReset ? (
+                    <AlertDialogTrigger className="rounded-lg bg-stone-800 p-2">
+                      Reset Scoreboard
+                    </AlertDialogTrigger>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setStats({
+                          ...stats,
+                          [appSettings.difficulty]: {
+                            wins: 0,
+                            losses: 0,
+                            elapsed: 0,
+                          },
+                        })
+                      }}
+                      className="rounded-lg bg-stone-800 p-2"
+                    >
+                      Reset Scoreboard
+                    </button>
+                  )}
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>
@@ -477,15 +528,32 @@ function App() {
                       <AlertDialogDescription>
                         This action cannot be undone. This will permanently
                         clear your score. There's no going back!
+                        <div className="flex space-x-2 items-center absolute bottom-0 my-8">
+                          <Switch
+                            checked={appSettings.warnBeforeReset}
+                            onCheckedChange={(e) =>
+                              setAppSettings({
+                                ...appSettings,
+                                warnBeforeReset: e,
+                              })
+                            }
+                          />
+                          <span>Don't show me again</span>
+                        </div>
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={() => {
-                          setLosses(0)
-                          setWins(0)
-                          setElapsed(0)
+                          setStats({
+                            ...stats,
+                            [appSettings.difficulty]: {
+                              wins: 0,
+                              losses: 0,
+                              elapsed: 0,
+                            },
+                          })
                         }}
                       >
                         Continue
@@ -516,6 +584,10 @@ function App() {
               inline={true}
               icon="ic:baseline-sports-score"
             />
+            <div className="flex justify-center">
+              {appSettings.difficulty.charAt(0).toUpperCase() +
+                appSettings.difficulty.slice(1)}
+            </div>
             <Separator className="my-2" />
             <div className="flex items-center space-x-2 rounded-lg bg-slate-800 p-2">
               <Icon
@@ -525,7 +597,10 @@ function App() {
                 icon="carbon:checkmark-filled"
               />
               <b>
-                <CountUp end={wins} preserveValue />
+                <CountUp
+                  end={stats[appSettings.difficulty].wins}
+                  preserveValue
+                />
               </b>
             </div>
             <div className="my-1 flex items-center space-x-2 rounded-lg bg-slate-800 p-2">
@@ -536,10 +611,13 @@ function App() {
                 icon="codicon:error"
               />
               <b>
-                <CountUp end={losses} preserveValue />
+                <CountUp
+                  end={stats[appSettings.difficulty].losses}
+                  preserveValue
+                />
               </b>
             </div>
-            {elapsed > 0 ? (
+            {stats[appSettings.difficulty].elapsed > 0 ? (
               <div className="my-1 flex items-center space-x-2 rounded-lg bg-slate-800 p-2">
                 <Icon
                   width={24}
@@ -548,7 +626,11 @@ function App() {
                   icon="mingcute:time-fill"
                 />
                 <b>
-                  <CountUp end={elapsed} preserveValue suffix="ms" />
+                  <CountUp
+                    end={stats[appSettings.difficulty].elapsed}
+                    preserveValue
+                    suffix="ms"
+                  />
                 </b>
               </div>
             ) : null}

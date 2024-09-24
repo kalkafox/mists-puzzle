@@ -9,3 +9,5 @@ export interface Round {
   correctChoice: Item
   tries: number
 }
+
+export type Difficulty = 'normal' | 'hard'
